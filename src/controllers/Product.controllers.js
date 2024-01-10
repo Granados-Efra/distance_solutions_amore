@@ -89,7 +89,7 @@ export const modifyProduct = async (req, res) => {
 
     // Verificar si el producto existe
     if (!productToModify) {
-      return res.status(404).json({ error: `No product find to update with ID: ${id}` });
+      return res.status(404).json({ error: `No product found to update with ID: ${id}` });
     }
 
     // Verificar si hay al menos un campo para modificar
@@ -120,7 +120,7 @@ export const modifyProduct = async (req, res) => {
     );
 
     if (!updatedProduct) {
-      return res.status(404).json({ message: "Product not find." });
+      return res.status(404).json({ message: "Product not found." });
     }
 
     res.status(200).json({ message: "Product succesfully modified!", updatedProduct });
