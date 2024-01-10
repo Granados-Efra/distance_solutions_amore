@@ -11,6 +11,22 @@ export const getAllProducts = async (req, res) => {
   }
 };
 
+// Endpoint to have all diferent values from a specific field
+export const getUniqueFields = async (req, res) => {
+  const {fieldName} = req.body;
+
+  try {
+    const uniqueValues = await ProductModel.aggregate([
+      { $group: { _id: `$${fieldName.toLowerCase()}`, count: { $sum: 1 } } },
+      { $project: { _id: 0, value: '$_id', count: 1 } },
+    ]);
+
+    res.status(200).json(uniqueValues);
+  } catch (error) {
+    res.status(500).json({ error: "Error interno del servidor: " + error });
+  }
+}
+
 // Product creation controller
 export const createProduct = async (req, res) => {
   try {

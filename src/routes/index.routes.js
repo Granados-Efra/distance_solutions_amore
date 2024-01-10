@@ -3,7 +3,8 @@ import {
   createProduct,
   getAllProducts,
   deleteProduct,
-  modifyProduct
+  modifyProduct,
+  getUniqueFields
 } from "../controllers/Product.controllers";
 
 const router = Router();
@@ -16,8 +17,10 @@ productsRouter.get("/", getAllProducts);
 
 productsRouter.post("/create", createProduct);
 
-productsRouter.post("/delete", deleteProduct);
+productsRouter.delete("/delete", deleteProduct);
 
 productsRouter.put("/update", modifyProduct)
+
+productsRouter.get("/unique-values", getUniqueFields);
 
 export default router;
