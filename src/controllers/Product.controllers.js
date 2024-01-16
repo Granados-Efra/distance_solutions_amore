@@ -31,7 +31,7 @@ export const getUniqueFields = async (req, res) => {
 export const createProduct = async (req, res) => {
   try {
     // Data coming at the body in JSON format
-    let { category, name, price, description, images, tags } = req.body;
+    let { category, name, price, description, images, tags, sizes } = req.body;
 
     // lowercase transformation
     category = category ? category.toLowerCase() : null;
@@ -56,6 +56,7 @@ export const createProduct = async (req, res) => {
       description,
       images,
       tags,
+      sizes
     });
 
     // Product collection save execution
@@ -93,7 +94,7 @@ export const deleteProduct = async (req, res) => {
 
 export const modifyProduct = async (req, res) => {
   try {
-    const { id, category, name, price, description, images, tags } = req.body;
+    const { id, category, name, price, description, images, tags, sizes } = req.body;
 
 
     // Verificar si el ID es un ObjectId válido
@@ -121,6 +122,7 @@ export const modifyProduct = async (req, res) => {
       description:  description ? description.toLowerCase() : undefined,
       images,
       tags: tags.map((field)=>field.toLowerCase()),
+      sizes
     };
 
     // Filter undefined fields in order to keep originals in case there's some falsy values
