@@ -1,6 +1,23 @@
 import ProductModel from "../models/Product";
 import mongoose from "mongoose";
 
+import path from 'path'
+import { writeFile, unlink } from "fs/promises";
+
+import multer from "multer";
+import cloudinary from 'cloudinary';
+
+const storage = multer.memoryStorage(); // Utiliza memoria para almacenar archivos
+const upload = multer({ storage: storage }).array('images', 5); // 'images' es el nombre del campo y 5 es el número máximo de archivos
+
+
+// Configuración de Cloudinary (necesitarás tu propia configuración)
+cloudinary.config({
+  cloud_name: 'damcd1aew',
+  api_key: '488626873193819',
+  api_secret: 'A8ujGx_CDviDoEQwUodV0R7b88U'
+});
+
 // Get all existing products
 export const getAllProducts = async (req, res) => {
   try {
@@ -27,45 +44,75 @@ export const getUniqueFields = async (req, res) => {
   }
 }
 
-// Product creation controller
 export const createProduct = async (req, res) => {
   try {
-    // Data coming at the body in JSON format
-    let { category, name, price, description, images, tags, sizes } = req.body;
+    upload(req, res, async function (err) {
+      if (err) {
+        return res.status(500).json({ error: "Error uploading file: " + err });
+      }
 
-    // lowercase transformation
-    category = category ? category.toLowerCase() : null;
-    name = name ? name.toLowerCase() : null;
-    description = description ? description.toLowerCase() : null;
-    tags = tags.map(field=> field.toLowerCase());
+      // Data coming in req.body
+      let { category, name, price, description, tags, sizes } = req.body;
+      const images = await req.files; // 'file' es el nombre del campo de archivos
 
-    // Not null or undefined verification for required fields
-    if (category === null || name === null || price === null) {
-      return res.status(400).json({
-        error:
-          "Required fields can't be null please check 'reveivedFeilds' to figure out how your data arrived to our server",
-        reveivedFeilds: { category, name, price },
+      const buffers = images.map(image => image.buffer);
+      const filePaths = images.map(image=> path.join(process.cwd(),"media", image.originalname))
+      
+      //File localcreation
+      await filePaths.map((path, index)=>{
+        writeFile(path ,buffers[index])
+      })
+
+      const uploadingPromises = filePaths.map(path =>
+        cloudinary.v2.uploader.upload(path, {
+          transformation: {
+            quality: 70,
+          },
+        })
+      );
+      
+      const results = await Promise.all(uploadingPromises);
+      
+      const imagesUrl = results.map(image => image.url)
+
+      //File local erasing
+      const deletingPromises = filePaths.map(async (path) => {
+        await unlink(path);
       });
-    }
 
-    // Product instance creation
-    const newProduct = new ProductModel({
-      category,
-      name,
-      price,
-      description,
-      images,
-      tags,
-      sizes
+      await Promise.all(deletingPromises);
+
+      // lowercase transformation
+      category = category ? category.toLowerCase() : null;
+      name = name ? name.toLowerCase() : null;
+      description = description ? description.toLowerCase() : null;
+      tags = tags?.map(field => field.toLowerCase());
+
+      // Not null or undefined verification for required fields
+      if (category === null || name === null || price === null) {
+        return res.status(400).json({
+          error: "Required fields can't be null. Please check 'receivedFields' to figure out how your data arrived at our server",
+          receivedFields: { category, name, price },
+        });
+      }
+
+      // Product instance creation
+      const newProduct = new ProductModel({
+        category,
+        name,
+        price,
+        description,
+        images:imagesUrl,
+        tags,
+        sizes
+      });
+
+      //Product collection save execution
+      const savedProduct = await newProduct.save();
+
+      //Send new Product created
+      res.status(201).json({ message: "Product successfully created!", savedProduct });
     });
-
-    // Product collection save execution
-    const savedProduct = await newProduct.save();
-
-    // Send new Product created
-    res
-      .status(201)
-      .json({ message: "Product succesfully created!", savedProduct });
   } catch (error) {
     res.status(500).json({ error: "Internal server error: " + error });
   }
