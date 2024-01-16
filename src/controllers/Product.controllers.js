@@ -121,6 +121,20 @@ export const createProduct = async (req, res) => {
 export const deleteProduct = async (req, res) => {
   try {
     const { id } = req.body;
+
+     // Verificar si el ID es un ObjectId válido
+     if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: `ID provided to delete is not a valid ID: ${id}` });
+    }
+
+    const imagesToDeleteFromCloudinary = await ProductModel.findById(id);
+
+    const resourcesToDelete = imagesToDeleteFromCloudinary.images.map(imageURL=>{
+      let imageURLWithoutSlash = imageURL.split('/')[imageURL.split('/').length - 1]
+      let cleanResourceName = imageURLWithoutSlash.split('.')[0]
+      return cleanResourceName
+    })
+
     const deletedProduct = await ProductModel.findByIdAndDelete(id);
 
     if (!deletedProduct) {
@@ -129,6 +143,11 @@ export const deleteProduct = async (req, res) => {
         .status(404)
         .json({ message: "Product not found, nothing was deleted!" });
     }
+
+    //Image deletion from Cloudinary
+    cloudinary.v2.api
+    .delete_resources(resourcesToDelete, 
+      { type: 'upload', resource_type: 'image' })
 
     // Utiliza el código de estado 204 para una eliminación exitosa
     res
