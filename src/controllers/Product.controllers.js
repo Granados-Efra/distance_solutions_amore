@@ -160,8 +160,9 @@ export const deleteProduct = async (req, res) => {
 
 export const modifyProduct = async (req, res) => {
   try {
-    const { id, category, name, price, description, images, tags, sizes } = req.body;
-
+    upload(req, res, async function (err) {
+    const { id, category, name, price, description, tags, sizes } = req.body;
+    const images = await req.files; // 'files' es el nombre del campo de archivos
 
     // Verificar si el ID es un ObjectId válido
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -180,34 +181,72 @@ export const modifyProduct = async (req, res) => {
       return res.status(400).json({ error: "You need at least one field to modify" });
     }
 
+    const buffers = images.map(image => image.buffer);
+    const filePaths = images.map(image=> path.join(process.cwd(),"media", image.originalname))
+    
+    //File localcreation
+    await filePaths.map((path, index)=>{
+      writeFile(path ,buffers[index])
+    })
+
+    const uploadingPromises = filePaths.map(path =>
+      cloudinary.v2.uploader.upload(path, {
+        transformation: {
+          quality: 70,
+        },
+      })
+    );
+    
+    const results = await Promise.all(uploadingPromises);
+    
+    const imagesUrl = results.map(image => image.url)
+
     // LowerCase casting
     const updatedFields = {
       category: category ? category.toLowerCase() : undefined,
       name: name ? name.toLowerCase() : undefined,
       price,
       description:  description ? description.toLowerCase() : undefined,
-      images,
+      images:imagesUrl,
       tags: tags.map((field)=>field.toLowerCase()),
       sizes
     };
+
+    //File local erasing
+    const deletingPromises = filePaths.map(async (path) => {
+      await unlink(path);
+    });
+
+    await Promise.all(deletingPromises);
 
     // Filter undefined fields in order to keep originals in case there's some falsy values
     const filteredUpdatedFields = Object.fromEntries(
       Object.entries(updatedFields).filter(([key, value]) => value !== undefined)
     );
 
- 
     const updatedProduct = await ProductModel.findByIdAndUpdate(
       id,
       filteredUpdatedFields,
       { new: true }
     );
 
+    const resourcesToDelete = productToModify.images.map(imageURL=>{
+      let imageURLWithoutSlash = imageURL.split('/')[imageURL.split('/').length - 1]
+      let cleanResourceName = imageURLWithoutSlash.split('.')[0]
+      return cleanResourceName
+    })
+
+    //Image deletion from Cloudinary
+    cloudinary.v2.api
+    .delete_resources(resourcesToDelete, 
+      { type: 'upload', resource_type: 'image' })
+
     if (!updatedProduct) {
       return res.status(404).json({ message: "Product not found." });
     }
 
     res.status(200).json({ message: "Product succesfully modified!", updatedProduct });
+  });
   } catch (error) {
     res.status(500).json({ error: "Internal server error: " + error });
   }
