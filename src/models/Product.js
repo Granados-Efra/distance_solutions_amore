@@ -1,12 +1,5 @@
 import { Schema, model } from "mongoose";
 
-
-const pizzasDescription = new Schema({
-  size: String,
-  pieces:Number,
-  price: Number
-})
-
 const ProductSchema = new Schema(
   {
     category: {
@@ -31,7 +24,7 @@ const ProductSchema = new Schema(
       type: [String], // String array with tags
     },
     sizes:{
-      type:[pizzasDescription],
+      type:[Object],
     }
   },
   {
