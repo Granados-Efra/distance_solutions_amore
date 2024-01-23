@@ -11,11 +11,12 @@ const storage = multer.memoryStorage(); // Utiliza memoria para almacenar archiv
 const upload = multer({ storage: storage }).array('images', 5); // 'images' es el nombre del campo y 5 es el número máximo de archivos
 
 
+
 // Configuración de Cloudinary (necesitarás tu propia configuración)
 cloudinary.config({
-  cloud_name: 'damcd1aew',
-  api_key: '488626873193819',
-  api_secret: 'A8ujGx_CDviDoEQwUodV0R7b88U'
+  cloud_name: 'distance-solutions',
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
 // Get all existing products
